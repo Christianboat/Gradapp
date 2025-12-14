@@ -13,3 +13,4 @@ python-dotenv==1.0.0
 email-validator
 Flask-Mail
 Flask-APScheduler
+gunicorn
