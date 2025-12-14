@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AppTrack Pro{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4 animate-fade-in">
+    <div class="col-md-8">
+        <h1 class="h3 fw-bold mb-1">Dashboard</h1>
+        <p class="text-muted mb-0">Overview of your application progress</p>
+    </div>
+    <div class="col-md-4 text-md-end mt-3 mt-md-0">
+        <a href="{{ url_for('applications.create') }}" class="btn btn-primary me-2 shadow-sm">
+            <i class="fas fa-plus me-2"></i>New Application
+        </a>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="row g-4 mb-5 animate-fade-in delay-100">
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card p-4 h-100 position-relative overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small text-uppercase fw-bold mb-1">Total</p>
+                    <h2 class="display-5 fw-bold mb-0 text-primary">{{ total }}</h2>
+                </div>
+                <div class="avatar-circle bg-primary-light text-primary rounded-circle p-3">
+                    <i class="fas fa-layer-group fa-lg"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                    Applications
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card p-4 h-100 position-relative overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small text-uppercase fw-bold mb-1">Submitted</p>
+                    {% set submitted = status_counts.get('Submitted', 0) %}
+                    <h2 class="display-5 fw-bold mb-0 text-success">{{ submitted }}</h2>
+                </div>
+                <div class="avatar-circle bg-success-subtle text-success rounded-circle p-3">
+                    <i class="fas fa-paper-plane fa-lg"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                    {{ ((submitted / total * 100)|round|int) if total > 0 else 0 }}% Rate
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card p-4 h-100 position-relative overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small text-uppercase fw-bold mb-1">Upcoming</p>
+                    <h2 class="display-5 fw-bold mb-0 text-warning">{{ upcoming_7|length }}</h2>
+                </div>
+                <div class="avatar-circle bg-warning-subtle text-warning rounded-circle p-3">
+                    <i class="fas fa-clock fa-lg"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-muted small">Next 7 Days</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6">
+        <div class="glass-card p-4 h-100 position-relative overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="text-muted small text-uppercase fw-bold mb-1">Overdue</p>
+                    <h2 class="display-5 fw-bold mb-0 text-danger">{{ overdue|length }}</h2>
+                </div>
+                <div class="avatar-circle bg-danger-subtle text-danger rounded-circle p-3">
+                    <i class="fas fa-exclamation-triangle fa-lg"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-danger small fw-bold">Action Required</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 animate-fade-in delay-200">
+    <!-- Status Distribution -->
+    <div class="col-lg-8">
+        <div class="glass-card p-0 h-100 d-flex flex-column">
+            <div class="p-4 border-bottom border-light">
+                <h5 class="mb-0 fw-bold">Recent Deadlines</h5>
+            </div>
+            <div class="p-0 flex-grow-1 table-responsive">
+                <ul class="nav nav-tabs nav-fill px-4 pt-3 border-0" id="deadlineTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active rounded-top-3" id="week-tab" data-bs-toggle="tab"
+                            data-bs-target="#week" type="button">
+                            Next 7 Days
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-top-3" id="month-tab" data-bs-toggle="tab"
+                            data-bs-target="#month" type="button">
+                            Next 30 Days
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-top-3 text-danger" id="overdue-tab" data-bs-toggle="tab"
+                            data-bs-target="#overdue" type="button">
+                            Overdue ({{ overdue|length }})
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content p-4" id="deadlineTabsContent">
+                    <!-- Week Tab -->
+                    <div class="tab-pane fade show active" id="week" role="tabpanel">
+                        {% if upcoming_7 %}
+                        {% for app in upcoming_7 %}
+                        <div
+                            class="d-flex align-items-center justify-content-between py-3 border-bottom border-light last-border-0">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-light rounded-circle p-2 me-3 text-center"
+                                    style="width: 45px; height: 45px;">
+                                    <i class="fas fa-calendar-day text-muted"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">
+                                        <a href="{{ url_for('applications.view', id=app.id) }}"
+                                            class="text-decoration-none text-dark">{{ app.title }}</a>
+                                    </h6>
+                                    <small class="text-muted">{{ app.institution }}</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                {% set days = app.days_remaining() %}
+                                <span class="badge bg-{{ get_urgency_class(days) }} rounded-pill mb-1">{{ days }}
+                                    days</span>
+                                <br>
+                                <small class="text-muted">{{ format_date(app.deadline) }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-mug-hot fa-3x text-muted mb-3 opacity-50"></i>
+                            <p class="text-muted mb-0">No deadlines this week. Relax!</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Month Tab -->
+                    <div class="tab-pane fade" id="month" role="tabpanel">
+                        {% if upcoming_30 %}
+                        {% for app in upcoming_30 %}
+                        <div
+                            class="d-flex align-items-center justify-content-between py-3 border-bottom border-light last-border-0">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-light rounded-circle p-2 me-3 text-center"
+                                    style="width: 45px; height: 45px;">
+                                    <i class="fas fa-calendar-alt text-muted"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">
+                                        <a href="{{ url_for('applications.view', id=app.id) }}"
+                                            class="text-decoration-none text-dark">{{ app.title }}</a>
+                                    </h6>
+                                    <small class="text-muted">{{ app.institution }}</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                {% set days = app.days_remaining() %}
+                                <span class="badge bg-{{ get_urgency_class(days) }} rounded-pill mb-1">{{ days }}
+                                    days</span>
+                                <br>
+                                <small class="text-muted">{{ format_date(app.deadline) }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted mb-0">No deadlines in the next 30 days.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Overdue Tab -->
+                    <div class="tab-pane fade" id="overdue" role="tabpanel">
+                        {% if overdue %}
+                        {% for app in overdue %}
+                        <div
+                            class="d-flex align-items-center justify-content-between py-3 border-bottom border-light last-border-0">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-circle bg-danger-subtle rounded-circle p-2 me-3 text-center"
+                                    style="width: 45px; height: 45px;">
+                                    <i class="fas fa-exclamation text-danger"></i>
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-bold">
+                                        <a href="{{ url_for('applications.view', id=app.id) }}"
+                                            class="text-decoration-none text-dark">{{ app.title }}</a>
+                                    </h6>
+                                    <small class="text-danger">Overdue by {{ -app.days_remaining() }} days</small>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <a href="{{ url_for('applications.edit', id=app.id) }}"
+                                    class="btn btn-sm btn-outline-danger">Update</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-check-circle fa-3x text-success mb-3 opacity-50"></i>
+                            <p class="text-muted mb-0">You're all caught up!</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column (Status & Quick Actions) -->
+    <div class="col-lg-4">
+        <!-- Status Breakdown -->
+        <div class="glass-card p-4 mb-4">
+            <h5 class="fw-bold mb-4">Status Breakdown</h5>
+            {% for status, count in status_counts.items() %}
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-{{ get_status_color(status) }} p-1 rounded-circle me-3"></span>
+                    <span class="fw-medium">{{ status }}</span>
+                </div>
+                <span class="fw-bold text-muted">{{ count }}</span>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">No data available</p>
+            {% endfor %}
+
+            <hr class="text-muted opacity-25 my-4">
+
+            <a href="{{ url_for('dashboard.export_csv') }}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-download me-2"></i>Export CSV
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

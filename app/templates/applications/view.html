@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+
+{% block title %}{{ application.title }} - AppTrack Pro{% endblock %}
+
+{% block content %}
+<div class="row mb-4 align-items-center animate-fade-in">
+    <div class="col-auto">
+        <a href="{{ url_for('applications.list') }}"
+            class="btn btn-outline-light text-dark border-0 p-2 rounded-circle hover-scale">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+    </div>
+    <div class="col">
+        <h1 class="h3 fw-bold mb-0 text-truncate">{{ application.title }}</h1>
+        <p class="text-muted mb-0">{{ application.institution }}</p>
+    </div>
+    <div class="col-auto">
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('applications.edit', id=application.id) }}" class="btn btn-outline-primary">
+                <i class="fas fa-edit me-2"></i>Edit
+            </a>
+            <form method="POST" action="{{ url_for('applications.delete', id=application.id) }}" class="d-inline"
+                onsubmit="return confirm('Delete this application?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row animate-fade-in delay-100">
+    <!-- Main Details -->
+    <div class="col-lg-8">
+        <!-- Status Banner -->
+        <div class="glass-card p-4 mb-4 border-start border-4 border-{{ get_status_color(application.status) }}">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-uppercase text-muted small fw-bold mb-1">Current Status</h6>
+                    <h2 class="mb-0 text-{{ get_status_color(application.status) }}">{{ application.status }}</h2>
+                </div>
+                <div class="text-end">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Update Status
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% for status in ['Not Started', 'In Progress', 'Submitted', 'Interview', 'Offer',
+                            'Accepted', 'Rejected', 'Waitlisted'] %}
+                            <li>
+                                <button class="dropdown-item status-btn" data-status="{{ status }}">
+                                    <span class="badge bg-{{ get_status_color(status) }} me-2 rounded-circle p-1">
+                                    </span>{{ status }}
+                                </button>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline Progress Bar -->
+            <div class="mt-4">
+                <div class="progress" style="height: 8px;">
+                    {% set status_order = ['Not Started', 'In Progress', 'Submitted', 'Interview', 'Offer', 'Accepted']
+                    %}
+                    {% if application.status in ['Rejected', 'Waitlisted'] %}
+                    <div class="progress-bar bg-{{ get_status_color(application.status) }} w-100" role="progressbar">
+                    </div>
+                    {% else %}
+                    {% set current_index = status_order.index(application.status) if application.status in status_order
+                    else 0 %}
+                    {% set progress = ((current_index + 1) / status_order|length * 100) %}
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%"></div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="glass-card p-4 mb-4">
+            <h5 class="fw-bold mb-4">Application Details</h5>
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="text-primary me-3"><i class="fas fa-university fa-lg"></i></div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Institution</small>
+                            <p class="h6 mb-0">{{ application.institution }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="text-info me-3"><i class="fas fa-calendar-day fa-lg"></i></div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Deadline</small>
+                            <p class="h6 mb-0">
+                                {{ format_date(application.deadline) }}
+                                {% set days = application.days_remaining() %}
+                                {% if days is not none %}
+                                <span class="badge bg-{{ get_urgency_class(days) }} ms-2 rounded-pill small">
+                                    {{ days }} days {{ 'left' if days >= 0 else 'overdue' }}
+                                </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="text-success me-3"><i class="fas fa-tag fa-lg"></i></div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Type</small>
+                            <p class="h6 mb-0">{{ application.application_type }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex">
+                        <div class="text-warning me-3"><i class="fas fa-globe-americas fa-lg"></i></div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Country</small>
+                            <p class="h6 mb-0">{{ application.country or 'Not specified' }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% if application.program_role %}
+                <div class="col-12">
+                    <div class="d-flex">
+                        <div class="text-secondary me-3"><i class="fas fa-graduation-cap fa-lg"></i></div>
+                        <div>
+                            <small class="text-muted text-uppercase fw-bold">Program / Role</small>
+                            <p class="h6 mb-0">{{ application.program_role }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if application.application_url %}
+            <div class="mt-4 pt-3 border-top">
+                <a href="{{ application.application_url }}" target="_blank" class="btn btn-light w-100 text-primary">
+                    <i class="fas fa-external-link-alt me-2"></i>Open Application Portal
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- TASKS SECTION -->
+        <div class="glass-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-check-square me-2 text-success"></i>Tasks</h5>
+                <span class="badge bg-light text-dark rounded-pill" id="task-count">{{ application.tasks.count()
+                    }}</span>
+            </div>
+
+            <!-- Quick Add Task -->
+            <form action="{{ url_for('applications.add_task', id=application.id) }}" method="POST" class="mb-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <div class="input-group">
+                    <input type="text" name="description" class="form-control bg-light border-0"
+                        placeholder="Add a new task..." required>
+                    <button class="btn btn-primary" type="submit"><i class="fas fa-plus"></i></button>
+                </div>
+            </form>
+
+            <div class="list-group list-group-flush rounded-3" id="task-list">
+                {% for task in application.tasks %}
+                <div
+                    class="list-group-item bg-transparent border-light d-flex align-items-center justify-content-between p-2">
+                    <div class="form-check d-flex align-items-center mb-0">
+                        <input class="form-check-input task-checkbox" type="checkbox" value="" id="task-{{ task.id }}"
+                            data-task-id="{{ task.id }}" {% if task.is_completed %}checked{% endif %}>
+                        <label
+                            class="form-check-label ms-2 {% if task.is_completed %}text-muted text-decoration-line-through{% endif %}"
+                            for="task-{{ task.id }}">
+                            {{ task.description }}
+                        </label>
+                    </div>
+                    <button class="btn btn-sm btn-link text-danger delete-task-btn" data-task-id="{{ task.id }}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                {% else %}
+                <div class="text-center py-3 text-muted small">
+                    No tasks yet. Keep track of your to-dos!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- DOCUMENTS SECTION -->
+        <div class="glass-card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="fas fa-folder-open me-2 text-warning"></i>Documents</h5>
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#uploadCollapse">
+                    <i class="fas fa-cloud-upload-alt me-1"></i>Upload
+                </button>
+            </div>
+
+            <!-- Upload Form -->
+            <div class="collapse mb-3" id="uploadCollapse">
+                <div class="card card-body bg-light border-0 p-3">
+                    <form action="{{ url_for('applications.upload_document', id=application.id) }}" method="POST"
+                        enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <div class="mb-2">
+                            <input class="form-control form-control-sm" type="file" name="file" required>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-sm">Upload File</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                {% for doc in application.documents %}
+                <div class="col-md-6">
+                    <div class="bg-light bg-opacity-50 p-3 rounded-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center text-truncate">
+                            <div class="me-3 text-danger">
+                                <i class="fas fa-file-pdf fa-lg"></i>
+                            </div>
+                            <div class="text-truncate">
+                                <h6 class="mb-0 small fw-bold text-truncate" title="{{ doc.filename }}">{{ doc.filename
+                                    }}</h6>
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ format_date(doc.uploaded_at)
+                                    }}</small>
+                            </div>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-link text-muted btn-sm p-0" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                <li><a class="dropdown-item small"
+                                        href="{{ url_for('applications.download_document', doc_id=doc.id) }}"><i
+                                            class="fas fa-download me-2"></i>Download</a></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <form action="{{ url_for('applications.delete_document', doc_id=doc.id) }}"
+                                        method="POST">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                                        <button class="dropdown-item small text-danger" type="submit"><i
+                                                class="fas fa-trash me-2"></i>Delete</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12 text-center py-3 text-muted small">
+                    No documents uploaded. Attach resumes, cover letters, etc.
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {% if application.notes %}
+        <div class="glass-card p-4 mb-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-sticky-note me-2 text-warning"></i>My Notes</h5>
+            <div class="bg-light bg-opacity-50 p-3 rounded-3">
+                {{ application.notes|replace('\n', '<br>')|safe }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Metadata -->
+        <div class="glass-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Timeline</h6>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">Created</span>
+                <span class="fw-medium">{{ format_date(application.created_at) }}</span>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Last Updated</span>
+                <span class="fw-medium">{{ format_date(application.updated_at) }}</span>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="glass-card p-4">
+            <h6 class="fw-bold mb-3">Similar Stats</h6>
+            <p class="text-muted small">Compare with your other applications based on institution or type.</p>
+            {% set similar = [] %}
+            {% for app in current_user.applications %}
+            {% if app.id != application.id and
+            (app.institution == application.institution or
+            app.application_type == application.application_type) %}
+            {% set _ = similar.append(app) %}
+            {% endif %}
+            {% endfor %}
+
+            {% if similar %}
+            <div class="list-group list-group-flush rounded-3">
+                {% for app in similar[:3] %}
+                <a href="{{ url_for('applications.view', id=app.id) }}"
+                    class="list-group-item list-group-item-action bg-transparent border-light">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 small fw-bold text-truncate" style="max-width: 150px;">{{ app.title }}</h6>
+                            <small class="text-muted">{{ app.status }}</small>
+                        </div>
+                        <i class="fas fa-chevron-right text-muted small"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center p-3 bg-light rounded-3">
+                <small class="text-muted">No similar applications yet.</small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const statusBtns = document.querySelectorAll('.status-btn');
+        const applicationId = "{{ application.id }}";
+        const csrfToken = "{{ csrf_token() }}";
+
+        // --- Status Update Logic ---
+        statusBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const newStatus = this.dataset.status;
+
+                fetch(`/applications/${applicationId}/update-status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Failed to update status');
+                    });
+            });
+        });
+
+        // --- Task Handling ---
+        // Toggle Task
+        document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function () {
+                const taskId = this.dataset.taskId;
+                const label = this.nextElementSibling;
+
+                fetch(`/applications/task/${taskId}/toggle`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (data.is_completed) {
+                                label.classList.add('text-muted', 'text-decoration-line-through');
+                            } else {
+                                label.classList.remove('text-muted', 'text-decoration-line-through');
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error toggling task:', err));
+            });
+        });
+
+        // Delete Task
+        document.querySelectorAll('.delete-task-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                if (!confirm('Delete this task?')) return;
+
+                const taskId = this.dataset.taskId;
+                const listItem = this.closest('.list-group-item');
+
+                fetch(`/applications/task/${taskId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            listItem.remove();
+                            // Update count
+                            const countBadge = document.getElementById('task-count');
+                            if (countBadge) {
+                                countBadge.innerText = Math.max(0, parseInt(countBadge.innerText) - 1);
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error deleting task:', err));
+            });
+        });
+    });
+</script>
+{% endblock %}
