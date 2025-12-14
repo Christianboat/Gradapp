@@ -14,4 +14,3 @@ email-validator
 Flask-Mail
 Flask-APScheduler
 gunicorn
-python-3.11.7
